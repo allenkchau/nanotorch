@@ -17,6 +17,7 @@ class Value:
 
     def __mul__(self, a, b):
         c = Value(a.data * b.data)
+        return c
 
     
     
