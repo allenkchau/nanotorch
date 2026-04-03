@@ -5,7 +5,7 @@ class Value:
         self.data = data
         # our gradient should initially be 0
         self.grad = 0
-        # parents for 
+        # parents for leaves are empty
         self.parents = ()
         self.op = ""
         # every node should have a _backward function; for leaf nodes we have a function that does nothing
@@ -48,40 +48,67 @@ class Value:
         # define the backward pass for multiplication
         def mul_backward():
             self.grad += res.grad * other.data
-            other.grad += res.grad* self.data
+            other.grad += res.grad * self.data
 
         res._backward = mul_backward
         return res
 
-    def __div__(self, other):
+    def __truediv__(self, other):
         res = Value(self.data / other.data)
         res.op = "/"
         res.parents = (self, other)
 
         # define the backward pass for division
         def div_backward():
-            self.grad += res.grad
-            other.grad += -res.grad
+            self.grad += res.grad * (1 / other.data)
+            other.grad += res.grad * (-self.data / other.data**2)
 
         res._backward = div_backward
         return res
 
+    
+    # activations are also just operations in our computational graph
+    def relu(self):
+        res = Value(max(0, self.data))
+        res.op = "relu"
+        res.parents = (self,)
+        def relu_backward():
+            if self.data > 0:
+                self.grad += res.grad
+
+        res._backward = relu_backward
+        return res
+
+
     # backprop algo
     def backward(self):
-        # if this is our output or final loss node, dL/dL = 1
-        self.grad = 1
-        
-        # first we build a topological ordering from output node
+        # first we build the graph order
+        # we don't want to visit the same node again when traversing the graph
+        order = []
+        visited = set()
+
+        # dfs helper
         def dfs(node):
-            order = []
-            if not node:
-                return
+            visited.add(node)
             for parent in node.parents:
-                dfs(parent)
+                if parent not in visited:
+                    dfs(parent)
+            order.append(node)
             return order
 
-        # we loop over nodes and call _backward for each node in the graph
-        for node in nodes:
+        # build graph
+        dfs(self)
+
+        # clear all the grads - PyTorch has an explicit zero grad method but I will zero the grads in backward for now; this may change later
+        for node in order:
+            node.grad = 0
+
+        # if this is our output or final loss node, dL/dL = 1
+        self.grad = 1
+
+        # run backward
+        # we process over nodes in reverse topological order and call _backward for each node in the graph
+        for node in order[::-1]:
             node._backward()
         
 
