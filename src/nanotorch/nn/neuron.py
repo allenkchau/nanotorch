@@ -10,13 +10,21 @@ class Neuron:
         self.activation = activation
 
     # this is our forward method
-    def __call__(self, x: list[Value]):
+    def __call__(self, x):
+        # make sure x is an iterable
+        try:
+            iter(x)
+        except TypeError:
+            raise TypeError("Input must be an iterable of values")
+
+        # neurons should operate on Values
+        inputs = [elem if isinstance(elem, Value) else Value(elem) for elem in x]
         assert len(x) == len(self.weights), "Input and weights don't have the same shape!"
 
         # compute weighted sum with bias
         res = self.bias
-        for i, w in zip(x, self.weights):
-            res += w * i
+        for x_i, w_i in zip(inputs, self.weights):
+            res += w_i * x_i
 
         # do activation
         if self.activation:

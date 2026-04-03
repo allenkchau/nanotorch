@@ -1,62 +1,63 @@
-"""
-uv run pytest -v tests/
-"""
-
+import pytest
 
 from nanotorch.value import Value
 
-def test_scalar_addition_forward():
-    a = Value(5)
-    b = Value(6)
-    c = a + b
-    assert c.data == 11
-    assert a in c.parents and b in c.parents
-    print(c)
 
-def test_scalar_multiplication_forward():
-    a = Value(5)
-    b = Value(6)
+@pytest.mark.parametrize(
+    ("left", "right", "operator", "expected"),
+    [
+        (5.0, 6.0, "add", 11.0),
+        (5.0, 6.0, "mul", 30.0),
+    ],
+)
+def test_binary_ops_forward_build_expected_values(left, right, operator, expected):
+    a = Value(left)
+    b = Value(right)
+
+    out = a + b if operator == "add" else a * b
+
+    assert out.data == pytest.approx(expected)
+    assert out.parents == (a, b)
+
+
+def test_addition_local_backward_propagates_upstream_gradient():
+    a = Value(5.0)
+    b = Value(6.0)
+    out = a + b
+
+    out.grad = 60.0
+    out._backward()
+
+    assert a.grad == pytest.approx(60.0)
+    assert b.grad == pytest.approx(60.0)
+
+
+def test_multiplication_local_backward_uses_local_derivatives():
+    a = Value(5.0)
+    b = Value(6.0)
+    out = a * b
+
+    out.grad = 60.0
+    out._backward()
+
+    assert a.grad == pytest.approx(60.0 * b.data)
+    assert b.grad == pytest.approx(60.0 * a.data)
+
+
+def test_backward_accumulates_gradients_across_shared_subgraph():
+    a = Value(5.0)
+    b = Value(6.0)
     c = a * b
-    assert c.data == 30
-    assert a in c.parents and b in c.parents
-    print(c)
+    out = c + a
 
-def test_scalar_addition_local_backward():
-    a = Value(5)
-    b = Value(6)
-    c = a + b
+    out.backward()
 
-    # arbitrarily set the grad to a number and see if the parent grads follow the math
-    c.grad = 60
-    c._backward()
-    assert a.grad == 60
-    assert b.grad == 60
-    assert a in c.parents and b in c.parents
+    assert a.grad == pytest.approx(b.data + 1.0)
+    assert b.grad == pytest.approx(a.data)
+    assert c.grad == pytest.approx(1.0)
 
-def test_scalar_multiplication_local_backward():
-    a = Value(5)
-    b = Value(6)
-    c = a * b
 
-    # arbitrarily set the grad to a number and see if the parent grads follow the math
-    c.grad = 60
-    c._backward()
-    assert a.grad == 360
-    assert b.grad == 300
-    assert a in c.parents and b in c.parents
-
-def test_scalar_backward():
-    a = Value(5)
-    b = Value(6)
-    c = a * b
-    d = c + a
-
-    d.backward()
-    assert a.grad == b.data + 1
-    assert b.grad == a.data
-    assert c.grad == 1
-
-def test_complex_scalar_backprop():
+def test_complex_graph_forward_and_backward_values_match_manual_derivatives():
     a = Value(2.0)
     b = Value(-3.0)
     c = Value(10.0)
@@ -66,25 +67,19 @@ def test_complex_scalar_backprop():
     f = a * e          # 8
     g = f / b          # -8/3
     h = g - a          # -14/3
-
     h.backward()
 
-    # forward checks
-    assert abs(d.data - (-6.0)) < 1e-9
-    assert abs(e.data - 4.0) < 1e-9
-    assert abs(f.data - 8.0) < 1e-9
-    assert abs(g.data - (-8.0 / 3.0)) < 1e-9
-    assert abs(h.data - (-14.0 / 3.0)) < 1e-9
+    assert d.data == pytest.approx(-6.0)
+    assert e.data == pytest.approx(4.0)
+    assert f.data == pytest.approx(8.0)
+    assert g.data == pytest.approx(-8.0 / 3.0)
+    assert h.data == pytest.approx(-14.0 / 3.0)
 
-    # gradient checks
-    # h = a*(a*b + c)/b - a
-    #   = a^2 + a*c/b - a
-    #
-    # dh/da = 2a + c/b - 1 = 4 - 10/3 - 1 = -1/3
-    # dh/db = -a*c / b^2 = -(2*10)/9 = -20/9
-    # dh/dc = a/b = -2/3
-
-    assert abs(a.grad - (-1.0 / 3.0)) < 1e-9
-    assert abs(b.grad - (-20.0 / 9.0)) < 1e-9
-    assert abs(c.grad - (-2.0 / 3.0)) < 1e-9
+    # h = a*(a*b + c)/b - a = a^2 + a*c/b - a
+    # dh/da = 2a + c/b - 1
+    # dh/db = -a*c / b^2
+    # dh/dc = a / b
+    assert a.grad == pytest.approx(-1.0 / 3.0)
+    assert b.grad == pytest.approx(-20.0 / 9.0)
+    assert c.grad == pytest.approx(-2.0 / 3.0)
 
