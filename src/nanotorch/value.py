@@ -15,6 +15,8 @@ class Value:
         return f"Data: {self.data}, Grad: {self.grad}, Op: {self.op}"
 
     def __add__(self, other):
+        if not isinstance(other, Value):
+            other = Value(other)
         res = Value(self.data + other.data)
         res.op = "+"
         res.parents = (self, other)
@@ -27,7 +29,12 @@ class Value:
         res._backward = add_backward
         return res
 
+    def __radd__(self, other):
+        return self + other
+
     def __sub__(self, other):
+        if not isinstance(other, Value):
+            other = Value(other)
         res = Value(self.data - other.data)
         res.op = "-"
         res.parents = (self, other)
@@ -40,7 +47,14 @@ class Value:
         res._backward = sub_backward
         return res
 
+    def __rsub__(self, other):
+        if not isinstance(other, Value):
+            other = Value(other)
+        return other - self
+
     def __mul__(self, other):
+        if not isinstance(other, Value):
+            other = Value(other)
         res = Value(self.data * other.data)
         res.op = "*"
         res.parents = (self, other)
@@ -53,7 +67,12 @@ class Value:
         res._backward = mul_backward
         return res
 
+    def __rmul__(self, other):
+        return self * other
+
     def __truediv__(self, other):
+        if not isinstance(other, Value):
+            other = Value(other)
         res = Value(self.data / other.data)
         res.op = "/"
         res.parents = (self, other)
@@ -65,6 +84,11 @@ class Value:
 
         res._backward = div_backward
         return res
+
+    def __rtruediv__(self, other):
+        if not isinstance(other, Value):
+            other = Value(other)
+        return other / self
 
     
     # activations are also just operations in our computational graph
@@ -98,10 +122,6 @@ class Value:
 
         # build graph
         dfs(self)
-
-        # clear all the grads - PyTorch has an explicit zero grad method but I will zero the grads in backward for now; this may change later
-        for node in order:
-            node.grad = 0
 
         # if this is our output or final loss node, dL/dL = 1
         self.grad = 1

@@ -83,3 +83,43 @@ def test_complex_graph_forward_and_backward_values_match_manual_derivatives():
     assert b.grad == pytest.approx(-20.0 / 9.0)
     assert c.grad == pytest.approx(-2.0 / 3.0)
 
+
+def test_radd_with_scalar_matches_forward_and_backward():
+    a = Value(2.5)
+    out = 3.0 + a
+
+    out.backward()
+
+    assert out.data == pytest.approx(5.5)
+    assert a.grad == pytest.approx(1.0)
+
+
+def test_rsub_with_scalar_matches_forward_and_backward():
+    a = Value(2.0)
+    out = 5.0 - a
+
+    out.backward()
+
+    assert out.data == pytest.approx(3.0)
+    assert a.grad == pytest.approx(-1.0)
+
+
+def test_rmul_with_scalar_matches_forward_and_backward():
+    a = Value(-1.5)
+    out = 4.0 * a
+
+    out.backward()
+
+    assert out.data == pytest.approx(-6.0)
+    assert a.grad == pytest.approx(4.0)
+
+
+def test_rtruediv_with_scalar_matches_forward_and_backward():
+    a = Value(2.0)
+    out = 8.0 / a
+
+    out.backward()
+
+    assert out.data == pytest.approx(4.0)
+    assert a.grad == pytest.approx(-2.0)
+

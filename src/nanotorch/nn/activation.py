@@ -6,5 +6,8 @@ def relu(x: Value) -> Value:
 def tanh(x: Value) -> Value:
     return x.tanh()
 
-def tanh(x: Value) -> Value:
+def gelu(x: Value) -> Value:
     return x.gelu()
+
+def silu(x: Value) -> Value:
+    return x.silu()
