@@ -1,8 +1,9 @@
 import numpy as np
 
 from nanotorch.value import Value
+from nanotorch.nn.module import Module
 
-class Neuron:
+class Neuron(Module):
     def __init__(self, input_dim, activation=None):
         # create random scalar weights
         self.weights: list[Value] = [Value(elem) for elem in np.random.randn(input_dim)]
@@ -31,7 +32,7 @@ class Neuron:
             res = self.activation(res)
         return res
 
-    # get the trainable parameters
-    def parameters(self):
-        return self.weights + [self.bias]
+    # # get the trainable parameters
+    # def parameters(self):
+    #     return self.weights + [self.bias]
 

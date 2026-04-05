@@ -70,6 +70,7 @@ def test_neuron_activation_is_applied():
 
     np.random.seed(9)
     neuron = Neuron(input_dim=2, activation=scale_by_two)
+    #print(neuron.__dict__)
     x = [0.25, -0.75]
 
     weighted_sum = neuron.bias.data + sum(

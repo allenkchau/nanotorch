@@ -1,6 +1,7 @@
 from nanotorch.nn.layer import Layer
+from nanotorch.nn.module import Module
 
-class MLP:
+class MLP(Module):
     def __init__(self, layer_sizes, activation=None):
         self.layers: list[Layer] = []
         for i, (in_dim, out_dim) in enumerate(zip(layer_sizes[:-1], layer_sizes[1:])):
@@ -19,5 +20,5 @@ class MLP:
             curr = output
         return curr
 
-    def parameters(self):
-        return [param for layer in self.layers for param in layer.parameters()]
+    # def parameters(self):
+    #     return [param for layer in self.layers for param in layer.parameters()]
